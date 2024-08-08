@@ -3,6 +3,7 @@ package mlog
 import (
 	"context"
 	"fmt"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"log"
 	"os"
@@ -85,6 +86,13 @@ type Logger struct {
 	fileLevel    zap.AtomicLevel
 	logrLogger   *logr.Logger
 	mutex        *sync.RWMutex
+}
+
+type LogMessage struct {
+	Timestamp time.Time `json:"timestamp"`
+	Level     string    `json:"level"`
+	Code      int       `json:"code"`
+	Message   string    `json:"message"`
 }
 
 func getZapLevel(level string) zapcore.Level {
@@ -201,7 +209,12 @@ func (l *Logger) StdLogAt(level string, fields ...Field) (*log.Logger, error) {
 func (l *Logger) StdLogWriter() io.Writer {
 	newLogger := *l
 	newLogger.zap = newLogger.zap.WithOptions(zap.AddCallerSkip(4), getStdLogOption())
-	f := newLogger.Info
+
+	// Создаем адаптер функции для приведения типов
+	f := func(msg string, fields ...Field) {
+		newLogger.Info(msg, 0, fields...) // 0 или другой код события по умолчанию
+	}
+
 	return &loggerWriter{f}
 }
 
@@ -246,6 +259,7 @@ func (l *Logger) Critical(message string, specificCode int, fields ...Field) { /
 
 func (l *Logger) Log(level LogLevel, message string, specificCode int, fields ...Field) { // Добавлен параметр int для кода события
 	eventCode := GetEventCode(level, specificCode) // Использование кода события
+
 	logMessage := LogMessage{
 		Timestamp: time.Now(),
 		Level:     level.Name,
@@ -257,12 +271,12 @@ func (l *Logger) Log(level LogLevel, message string, specificCode int, fields ..
 	l.zap.With(fields...).Sugar().Infof("%+v", logMessage)
 
 	// Логирование с использованием logr
-	if isLevelEnabled(l.getLogger(), logr.Level(level.ID)) {
-		l.getLogger().WithFields(zapToLogr(fields)).Info(message)
-	}
+	// if isLevelEnabled(l.getLogger(), logr.Level(level.ID)) {
+	// l.getLogger().WithFields(zapToLogr(fields)).Info(message)
+	//}
 }
 
-func (l *Logger) LogM(levels []LogLevel, specificCode int, message string, fields ...Field) { // Добавлен параметр int для кода события
+func (l *Logger) LogM(levels []LogLevel, message string, fields ...Field) {
 	var logger *logr.Logger
 	for _, lvl := range levels {
 		if isLevelEnabled(l.getLogger(), logr.Level(lvl)) {

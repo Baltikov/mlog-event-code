@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/baltikov/mlog-event-code"
 	"io"
 	"strconv"
 	"strings"
 	"time"
-
-	"assmr-lfp-assmr.cbr.ru/shared/mlog"
 )
 
 func ParseLogMessage(msg string) LogEntry {

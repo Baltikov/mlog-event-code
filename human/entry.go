@@ -2,10 +2,9 @@ package human
 
 import (
 	"fmt"
+	"github.com/baltikov/mlog-event-code"
 	"strings"
 	"time"
-
-	"assmr-lfp-assmr.cbr.ru/shared/mlog"
 )
 
 type LogEntry struct {
