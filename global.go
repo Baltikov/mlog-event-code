@@ -116,3 +116,5 @@ func criticalWrapper(message string, fields ...Field) {
 func logWrapper(level LogLevel, message string, fields ...Field) {
 	globalLogger.Log(level, message, 0, fields...) // 0 - значение specificCode по умолчанию
 }
+
+//
