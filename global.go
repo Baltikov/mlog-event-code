@@ -28,8 +28,6 @@ var AddTarget AddTargetFunc = defaultAddTarget
 var RemoveTargets RemoveTargetsFunc = defaultRemoveTargets
 var EnableMetrics EnableMetricsFunc = defaultEnableMetrics
 
-// logWriterFunc provides access to mlog via io.Writer, so the standard logger
-// can be redirected to use mlog and whatever targets are defined.
 type logWriterFunc func([]byte) (int, error)
 
 type IsLevelEnabledFunc func(LogLevel) bool
@@ -43,21 +41,23 @@ type AddTargetFunc func(...logr.Target) error
 type RemoveTargetsFunc func(context.Context, func(TargetInfo) bool) error
 type EnableMetricsFunc func(logr.MetricsCollector) error
 
+// Инициализация глобального логгера
 func InitGlobalLogger(logger *Logger) {
-	// Clean up previous instance.
+	// Завершение работы предыдущего экземпляра логгера, если он существует
 	if globalLogger != nil && globalLogger.logrLogger != nil {
 		globalLogger.logrLogger.Logr().Shutdown()
 	}
 	glob := *logger
 	glob.zap = glob.zap.WithOptions(zap.AddCallerSkip(1))
 	globalLogger = &glob
-	IsLevelEnabled = globalLogger.IsLevelEnabled
-	Debug = globalLogger.Debug
-	Info = globalLogger.Info
-	Warn = globalLogger.Warn
-	Error = globalLogger.Error
-	Critical = globalLogger.Critical
-	Log = globalLogger.Log
+
+	// Присвоение функций-оберток глобальным переменным
+	Debug = debugWrapper
+	Info = infoWrapper
+	Warn = warnWrapper
+	Error = errorWrapper
+	Critical = criticalWrapper
+	Log = logWrapper
 	LogM = globalLogger.LogM
 	Flush = globalLogger.Flush
 	ConfigAdvancedLogging = globalLogger.ConfigAdvancedLogging
@@ -84,12 +84,35 @@ func RedirectStdLog(logger *Logger) {
 	log.SetOutput(logWriterFunc(writer))
 }
 
-// DON'T USE THIS Modify the level on the app logger
 func GloballyDisableDebugLogForTest() {
 	globalLogger.consoleLevel.SetLevel(zapcore.ErrorLevel)
 }
 
-// DON'T USE THIS Modify the level on the app logger
 func GloballyEnableDebugLogForTest() {
 	globalLogger.consoleLevel.SetLevel(zapcore.DebugLevel)
+}
+
+// Функции-обертки для глобальных переменных логгирования
+func debugWrapper(message string, fields ...Field) {
+	globalLogger.Debug(message, 0, fields...) // 0 - значение specificCode по умолчанию
+}
+
+func infoWrapper(message string, fields ...Field) {
+	globalLogger.Info(message, 0, fields...) // 0 - значение specificCode по умолчанию
+}
+
+func warnWrapper(message string, fields ...Field) {
+	globalLogger.Warn(message, 0, fields...) // 0 - значение specificCode по умолчанию
+}
+
+func errorWrapper(message string, fields ...Field) {
+	globalLogger.Error(message, 0, fields...) // 0 - значение specificCode по умолчанию
+}
+
+func criticalWrapper(message string, fields ...Field) {
+	globalLogger.Critical(message, 0, fields...) // 0 - значение specificCode по умолчанию
+}
+
+func logWrapper(level LogLevel, message string, fields ...Field) {
+	globalLogger.Log(level, message, 0, fields...) // 0 - значение specificCode по умолчанию
 }
